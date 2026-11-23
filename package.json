@@ -1,0 +1,32 @@
+{
+  "name": "incommon",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Compare two friends' Google Takeout histories, privately, in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build --mode single",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "sample": "node scripts/make-samples.mjs",
+    "build:artifact": "npm run build:single && node scripts/to-artifact.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "@zip.js/zip.js": "2.24.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.6",
+    "vite-plugin-singlefile": "2.3.4",
+    "vitest": "5.1.0"
+  }
+}
