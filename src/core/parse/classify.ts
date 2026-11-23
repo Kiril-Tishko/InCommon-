@@ -120,6 +120,7 @@ export function classify(raw: RawActivity): HistoryEvent | undefined {
         url: raw.titleUrl,
         time,
         videoId,
+        music: host === "music.youtube.com" || header === "youtube music" || undefined,
         channel: ch?.name?.trim() || undefined,
         channelId: channelIdOf(ch?.url),
       };

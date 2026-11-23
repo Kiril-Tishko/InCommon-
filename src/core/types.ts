@@ -14,7 +14,8 @@ export type EventKind =
   | "ytSearch" // YouTube search query
   | "visit" // a website visited (from Search clicks, Chrome, etc.)
   | "mapsSearch" // Google Maps search
-  | "ytSub"; // YouTube channel subscription (no timestamp)
+  | "ytSub" // YouTube channel subscription (no timestamp)
+  | "musicPlay"; // a song played (Spotify, or music recognised on YouTube / YouTube Music)
 
 export interface HistoryEvent {
   kind: EventKind;
@@ -29,6 +30,11 @@ export interface HistoryEvent {
   channelId?: string;
   /** YouTube video id, for ytWatch. */
   videoId?: string;
+  /** True when the record came from YouTube Music. */
+  music?: boolean;
+  /** For musicPlay. */
+  artist?: string;
+  track?: string;
 }
 
 /**
@@ -41,10 +47,12 @@ export interface HistoryEvent {
  *  sub  – YouTube channels subscribed to
  *  v    – YouTube videos watched
  *  site – websites (registrable domain)
+ *  art  – music artists
+ *  song – songs ("artist — title")
  */
-export type Namespace = "q" | "yq" | "mq" | "w" | "ch" | "sub" | "v" | "site";
+export type Namespace = "q" | "yq" | "mq" | "w" | "ch" | "sub" | "v" | "site" | "art" | "song";
 
-export const NAMESPACES: Namespace[] = ["q", "yq", "mq", "w", "ch", "sub", "v", "site"];
+export const NAMESPACES: Namespace[] = ["q", "yq", "mq", "w", "ch", "sub", "v", "site", "art", "song"];
 
 export interface ItemStat {
   count: number;
@@ -77,7 +85,7 @@ export interface Profile {
 
 export interface SourceReport {
   path: string;
-  format: "activity-json" | "activity-html" | "chrome-json" | "subscriptions-csv";
+  format: "activity-json" | "activity-html" | "chrome-json" | "subscriptions-csv" | "spotify-json";
   events: number;
 }
 
@@ -109,9 +117,9 @@ export interface MatchFile {
 }
 
 export function emptyTotals(): Record<EventKind, number> {
-  return { search: 0, ytWatch: 0, ytSearch: 0, visit: 0, mapsSearch: 0, ytSub: 0 };
+  return { search: 0, ytWatch: 0, ytSearch: 0, visit: 0, mapsSearch: 0, ytSub: 0, musicPlay: 0 };
 }
 
 export function emptyItems(): Record<Namespace, Record<string, ItemStat>> {
-  return { q: {}, yq: {}, mq: {}, w: {}, ch: {}, sub: {}, v: {}, site: {} };
+  return { q: {}, yq: {}, mq: {}, w: {}, ch: {}, sub: {}, v: {}, site: {}, art: {}, song: {} };
 }

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "sample": "node scripts/make-samples.mjs",
-    "build:artifact": "npm run build:single && node scripts/to-artifact.mjs"
+    "build:artifact": "npm run build:single && node scripts/to-artifact.mjs",
+    "local": "vite build && vite preview --port 4173 --open"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.3.0",

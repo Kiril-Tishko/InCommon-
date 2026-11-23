@@ -5,6 +5,8 @@ import { decodeMatchFile, normalizeCodeWord } from "../core/matchfile";
 import type { Progress } from "../worker/protocol";
 import { HourChart, Venn, WeekdayChart } from "./charts";
 import { DuoList } from "./lists";
+import { AiPanel } from "./AiPanel";
+import { togetherMessages } from "../ai/prompts";
 import { duration, fmt, formatDay, formatMonth, hourLabel, times } from "./format";
 
 export function Compare({ friend, setFriend, codeWord, setCodeWord, onCompare, busy, progress, error, codeWordError, result, isDemo }: {
@@ -49,7 +51,7 @@ export function Compare({ friend, setFriend, codeWord, setCodeWord, onCompare, b
             Use a different file
           </button>
         </div>
-        <Results c={result} />
+        <Results c={result} isDemo={isDemo} />
       </div>
     );
   }
@@ -129,7 +131,7 @@ export function Compare({ friend, setFriend, codeWord, setCodeWord, onCompare, b
         {error && !codeWordError && <p className="error">{error}</p>}
       </form>
 
-      {result && <Results c={result} />}
+      {result && <Results c={result} isDemo={isDemo} />}
     </div>
   );
 }
@@ -165,6 +167,29 @@ function Highlights({ c }: { c: Comparison }) {
         <>
           {coincidence.gap === 0 ? "On the same day" : `Within ${coincidence.gap} ${coincidence.gap === 1 ? "day" : "days"} of each other`}, you both {what}{" "}
           <span className="query">“{coincidence.label}”</span> ({formatDay(coincidence.gapMine)}).
+        </>
+      ),
+    });
+  }
+  const art = c.shared.art[0];
+  if (art) {
+    out.push({
+      key: "art",
+      body: (
+        <>
+          You both listen to <b>{art.label}</b>. {me}: {fmt(art.mine.count)} plays. {them}: {fmt(art.theirs.count)}.
+        </>
+      ),
+    });
+  }
+  const song = c.shared.song[0];
+  if (song) {
+    out.push({
+      key: "song",
+      body: (
+        <>
+          Your shared song: <b>{song.label}</b>
+          {song.extra ? ` by ${song.extra}` : ""}. {me} played it {times(song.mine.count)}, {them} {times(song.theirs.count)}.
         </>
       ),
     });
@@ -230,7 +255,7 @@ function Highlights({ c }: { c: Comparison }) {
   }
   return (
     <ul className="highlights">
-      {out.slice(0, 6).map((h) => (
+      {out.slice(0, 8).map((h) => (
         <li key={h.key}>{h.body}</li>
       ))}
     </ul>
@@ -246,9 +271,11 @@ const NS_LABEL: Record<string, string> = {
   v: "YouTube videos",
   site: "Websites",
   mq: "Maps searches",
+  art: "Music artists",
+  song: "Songs",
 };
 
-function Results({ c }: { c: Comparison }) {
+function Results({ c, isDemo }: { c: Comparison; isDemo: boolean }) {
   const me = c.myName;
   const them = c.friendName;
   const sharedTotal = c.overlap.reduce((s, o) => s + (o.ns === "w" ? 0 : o.shared), 0);
@@ -289,6 +316,42 @@ function Results({ c }: { c: Comparison }) {
           </div>
         </div>
         <Highlights c={c} />
+      </section>
+
+      <section className="section">
+        <AiPanel
+          id="together"
+          title="What an AI makes of you two"
+          intro={`An AI model running on your PC reads only what you and ${them} share, groups it into themes, describes your shared music taste and builds a playlist for you both.`}
+          build={(language) => togetherMessages(c, language)}
+          demo={isDemo}
+        />
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>Music you share</h2>
+          {c.shared.art.length > 0 && <span className="small muted">{fmt(c.shared.art.length)} artists, {fmt(c.shared.song.length)} songs</span>}
+        </div>
+        {c.shared.art.length === 0 && c.shared.song.length === 0 ? (
+          <p className="muted prose">
+            No music in common found.{" "}
+            {c.overlap.some((o) => o.ns === "art")
+              ? "Adding a Spotify download on the Load step often helps, for either of you."
+              : `${them}'s match file has no music in it. They may have made it with an older version or left music out.`}
+          </p>
+        ) : (
+          <div className="grid-2">
+            <div className="stack-sm">
+              <h3>Artists you both play</h3>
+              <DuoList items={c.shared.art} myName={me} friendName={them} showDates={false} />
+            </div>
+            <div className="stack-sm">
+              <h3>Songs you both play</h3>
+              <DuoList items={c.shared.song} myName={me} friendName={them} showDates={false} empty="No songs in common, but you share artists." />
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="section">
@@ -441,8 +504,8 @@ function Results({ c }: { c: Comparison }) {
           <div className="stack-sm small muted prose" style={{ marginTop: "0.75rem" }}>
             <p>
               For each kind of item, the app measures how similar your two lists are (cosine similarity of log counts), leaving out
-              everyday items like “weather” and huge sites everyone visits. Search words count most, then channels, websites,
-              searches, videos and subscriptions. Your daily rhythm counts a little. The combined value is spread onto 0 to 100.
+              everyday items like “weather” and huge sites everyone visits. Search words count most, then music artists, channels,
+              websites, searches, videos, subscriptions and songs. Your daily rhythm counts a little. The combined value is spread onto 0 to 100.
             </p>
             <div className="table-wrap">
             <table className="num" style={{ borderCollapse: "collapse", width: "100%" }}>

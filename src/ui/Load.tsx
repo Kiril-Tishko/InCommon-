@@ -3,7 +3,7 @@ import type { Progress } from "../worker/protocol";
 import { formatBytes } from "./files";
 
 export function Load({ onFiles, busy, progress, error, onCancel, hasOwnData }: {
-  onFiles: (files: File[]) => void;
+  onFiles: (files: File[], mode: "add" | "replace") => void;
   busy: boolean;
   progress?: Progress;
   error?: string;
@@ -13,12 +13,13 @@ export function Load({ onFiles, busy, progress, error, onCancel, hasOwnData }: {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [picked, setPicked] = useState<File[]>([]);
+  const [mode, setMode] = useState<"add" | "replace">("add");
 
   const take = (list: FileList | null) => {
     const files = [...(list ?? [])];
     if (files.length === 0) return;
     setPicked(files);
-    onFiles(files);
+    onFiles(files, hasOwnData ? mode : "replace");
   };
 
   return (
@@ -61,8 +62,25 @@ export function Load({ onFiles, busy, progress, error, onCancel, hasOwnData }: {
           </div>
         ) : (
           <>
-            <b style={{ fontSize: "var(--step-1)" }}>Drop your Takeout .zip here</b>
+            <b style={{ fontSize: "var(--step-1)" }}>Drop your Takeout or Spotify .zip here</b>
             <span className="muted small">Several parts are fine (takeout-…-001.zip, -002.zip). Loose .json or .html files work too.</span>
+            {hasOwnData && (
+              <div className="chips" role="radiogroup" aria-label="What to do with these files">
+                <button type="button" className="chip" role="radio" aria-checked={mode === "add"} onClick={() => setMode("add")}>
+                  Add to my history
+                </button>
+                <button type="button" className="chip" role="radio" aria-checked={mode === "replace"} onClick={() => setMode("replace")}>
+                  Replace my history
+                </button>
+              </div>
+            )}
+            {hasOwnData && (
+              <span className="small muted">
+                {mode === "add"
+                  ? "Use this for a different source, like Spotify. Adding the same files twice counts them twice."
+                  : "Everything you loaded before is replaced."}
+              </span>
+            )}
             <button className="btn" type="button" onClick={() => input.current?.click()}>
               Choose files
             </button>
@@ -88,11 +106,7 @@ export function Load({ onFiles, busy, progress, error, onCancel, hasOwnData }: {
         {error && <p className="error">{error}</p>}
       </div>
 
-      {hasOwnData && (
-        <p className="muted small">
-          Loading another export replaces the history you loaded before. Load all the parts of one export together.
-        </p>
-      )}
+
 
       <div className="grid-2">
         <div className="stack">
@@ -124,6 +138,19 @@ export function Load({ onFiles, busy, progress, error, onCancel, hasOwnData }: {
               Choose <b>Export once</b>, <b>.zip</b>, and the largest file size so you get fewer parts.
             </li>
             <li>Google emails you a link, usually within minutes to a few hours. Download the zip, then load it above.</li>
+          </ol>
+          <h3>Listen on Spotify? Add it too</h3>
+          <ol className="howto">
+            <li>
+              Open{" "}
+              <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noreferrer">
+                spotify.com/account/privacy
+              </a>{" "}
+              and request <b>Extended streaming history</b>. It covers every year you've used Spotify. <b>Account data</b> is faster but
+              covers only the last year.
+            </li>
+            <li>Spotify emails a zip, sometimes after a few days. Load it here with <b>Add to my history</b>.</li>
+            <li>Songs match across apps, so a song you stream on Spotify matches one your friend plays on YouTube Music.</li>
           </ol>
         </div>
         <div className="stack">

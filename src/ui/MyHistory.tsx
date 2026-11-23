@@ -4,6 +4,8 @@ import { isGenericQuery, isGenericSite } from "../core/normalize";
 import { HourChart, WeekdayChart, YearChart } from "./charts";
 import { RankedList, type Row } from "./lists";
 import { fmt, formatDay, formatMonth, hourLabel, plural, times } from "./format";
+import { AiPanel } from "./AiPanel";
+import { portraitMessages } from "../ai/prompts";
 
 const yearStart = (y: number) => Date.UTC(y, 0, 1) / 86_400_000;
 
@@ -27,9 +29,10 @@ function rows(profile: Profile, ns: Namespace, year: number | null, opts: { skip
   return out.slice(0, 300);
 }
 
-export function MyHistory({ profile, isDemo, onForget, onNext }: {
+export function MyHistory({ profile, isDemo, name, onForget, onNext }: {
   profile: Profile;
   isDemo: boolean;
+  name: string;
   onForget: () => void;
   onNext: () => void;
 }) {
@@ -43,6 +46,8 @@ export function MyHistory({ profile, isDemo, onForget, onNext }: {
       w: rows(profile, "w", year, { skip: (k) => isGenericQuery(k) }),
       ch: rows(profile, "ch", year),
       v: rows(profile, "v", year, { sub: true }),
+      art: rows(profile, "art", year),
+      song: rows(profile, "song", year, { sub: true }),
       site: rows(profile, "site", year),
       yq: rows(profile, "yq", year),
       mq: rows(profile, "mq", year),
@@ -54,6 +59,8 @@ export function MyHistory({ profile, isDemo, onForget, onNext }: {
   const topStat = top ? profile.items.q[top.key] : undefined;
   const topSite = rows(profile, "site", null, { skip: isGenericSite })[0];
   const peakHour = profile.hours.indexOf(Math.max(...profile.hours));
+  const topArtist = rows(profile, "art", null)[0];
+  const topSong = rows(profile, "song", null, { sub: true })[0];
   const t = profile.totals;
   const sinceLabel = profile.firstDay !== undefined ? formatMonth(profile.firstDay) : undefined;
 
@@ -86,6 +93,12 @@ export function MyHistory({ profile, isDemo, onForget, onNext }: {
             <b>{fmt(t.visit)}</b>
             <span className="small muted">site visits</span>
           </div>
+          {t.musicPlay > 0 && (
+            <div className="stat">
+              <b>{fmt(t.musicPlay)}</b>
+              <span className="small muted">songs played</span>
+            </div>
+          )}
           {t.mapsSearch > 0 && (
             <div className="stat">
               <b>{fmt(t.mapsSearch)}</b>
@@ -115,6 +128,46 @@ export function MyHistory({ profile, isDemo, onForget, onNext }: {
           </p>
         </section>
       )}
+
+      <section className="section">
+        <div className="section-head">
+          <h2>Your music</h2>
+          {topArtist && <span className="small muted">{plural(Object.keys(profile.items.art).length, "artist")}</span>}
+        </div>
+        {topArtist ? (
+          <>
+            <p className="prose">
+              Most played: <b>{topArtist.label}</b>, {plural(topArtist.count, "play")}.
+              {topSong && (
+                <>
+                  {" "}
+                  Your most played song is <b>{topSong.label}</b>
+                  {topSong.sub ? ` by ${topSong.sub}` : ""} ({plural(topSong.count, "play")}).
+                </>
+              )}
+            </p>
+            <div className="grid-2">
+              <div className="stack-sm">
+                <h3>Artists</h3>
+                <RankedList rows={lists.art} />
+              </div>
+              <div className="stack-sm">
+                <h3>Songs</h3>
+                <RankedList rows={lists.song} />
+              </div>
+            </div>
+            <p className="small muted prose">
+              From YouTube Music, music videos on YouTube and Spotify. Music on regular YouTube is recognised by how it's labelled
+              ("Artist - Topic" channels, "Official Video" titles), so some mixes and covers are missed.
+            </p>
+          </>
+        ) : (
+          <p className="muted prose">
+            No music found yet. Music comes from YouTube Music and music videos in your YouTube history, or from a Spotify download
+            you add on the Load step.
+          </p>
+        )}
+      </section>
 
       <section className="section">
         <div className="section-head">
@@ -184,6 +237,16 @@ export function MyHistory({ profile, isDemo, onForget, onNext }: {
             <YearChart years={profile.years} label="Activity per year" />
           </div>
         </div>
+      </section>
+
+      <section className="section">
+        <AiPanel
+          id="portrait"
+          title="What an AI makes of you"
+          intro="An AI model running on your own PC reads a summary of your history (top searches, channels, artists, how your interests changed) and writes a portrait of you, including your music taste."
+          build={(language) => portraitMessages(profile, name, language)}
+          demo={isDemo}
+        />
       </section>
 
       <section className="section">

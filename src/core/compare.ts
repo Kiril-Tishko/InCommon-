@@ -111,6 +111,10 @@ function specificity(ns: Namespace, key: string, generic: boolean): number {
       return 2;
     case "sub":
       return 1.5;
+    case "art":
+      return 1.3;
+    case "song":
+      return 1.6;
     default:
       return 1;
   }
@@ -158,7 +162,7 @@ function nightShare(hours: number[]): number {
 }
 
 /** How much each category counts towards the single "in common" score. */
-const SCORE_WEIGHTS: Partial<Record<Namespace, number>> = { w: 3, ch: 2, site: 1.5, q: 1, v: 1, sub: 1, yq: 0.5 };
+const SCORE_WEIGHTS: Partial<Record<Namespace, number>> = { w: 3, art: 2.5, ch: 2, site: 1.5, q: 1, v: 1, sub: 1, song: 1, yq: 0.5 };
 
 /**
  * Compare your own (plaintext) profile against a friend's match file.
@@ -192,7 +196,7 @@ export async function compare(
   );
   const genericTags = new Map<Namespace, Set<string>>(genericTagLists);
 
-  const shared = { q: [], yq: [], mq: [], w: [], ch: [], sub: [], v: [], site: [] } as Record<Namespace, SharedItem[]>;
+  const shared = { q: [], yq: [], mq: [], w: [], ch: [], sub: [], v: [], site: [], art: [], song: [] } as Record<Namespace, SharedItem[]>;
   const dot: Partial<Record<Namespace, number>> = {};
   const normMine: Partial<Record<Namespace, number>> = {};
   const mineCount: Partial<Record<Namespace, number>> = {};

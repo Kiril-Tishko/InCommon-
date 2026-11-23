@@ -1,6 +1,6 @@
 import { FileTextSink } from "./parse/router";
 import { ProfileBuilder } from "./profile";
-import { sampleTakeout, type SampleFile } from "./sample";
+import { sampleSpotify, sampleTakeout, type SampleFile } from "./sample";
 import type { Profile } from "./types";
 
 /** Build a profile from in-memory Takeout files (no zip). */
@@ -18,5 +18,5 @@ export function profileFromTexts(files: SampleFile[]): Profile {
 export const DEMO_CODE_WORD = "sourdough sunday";
 
 export function demoProfile(who: "Alex" | "Sam", scale = 1): Profile {
-  return profileFromTexts(sampleTakeout(who, "json", scale));
+  return profileFromTexts([...sampleTakeout(who, "json", scale), ...sampleSpotify(who, scale)]);
 }

@@ -3,7 +3,7 @@ import type { Comparison } from "./core/compare";
 import { compare } from "./core/compare";
 import { DEMO_CODE_WORD, demoProfile } from "./core/demo";
 import { buildMatchFile, DEFAULT_INCLUDE, type ShareOptions } from "./core/matchfile";
-import { profileEventTotal } from "./core/profile";
+import { mergeProfiles, profileEventTotal, upgradeProfile } from "./core/profile";
 import type { MatchFile, Profile } from "./core/types";
 import { compareWith, importFiles, makeMatchFile, TaskError } from "./worker/client";
 import type { Progress } from "./worker/protocol";
@@ -54,7 +54,8 @@ export function App() {
   const [opts, setOptsState] = useState<ShareOptions>(() => ({
     name: getPref("name", ""),
     codeWord: "",
-    include: getPref("include", DEFAULT_INCLUDE),
+    // Stored as what you left out, so categories added later are included by default.
+    include: DEFAULT_INCLUDE.filter((ns) => !getPref("exclude", [] as string[]).includes(ns)),
     hideWords: getPref("hide", [] as string[]),
   }));
   const [demoOpts, setDemoOpts] = useState<ShareOptions>(DEMO_OPTS);
@@ -76,7 +77,7 @@ export function App() {
     }
     setOptsState(o);
     setPref("name", o.name);
-    setPref("include", o.include);
+    setPref("exclude", DEFAULT_INCLUDE.filter((ns) => !o.include.includes(ns)));
     setPref("hide", o.hideWords);
   };
 
@@ -84,7 +85,8 @@ export function App() {
     warmUpDownloads();
     let alive = true;
     void (async () => {
-      const stored = await loadProfile();
+      const saved = await loadProfile();
+      const stored = saved && upgradeProfile(saved);
       if (!alive) return;
       if (stored) {
         setOwn(stored);
@@ -115,7 +117,7 @@ export function App() {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const onFiles = (files: File[]) => {
+  const onFiles = (files: File[], mode: "add" | "replace") => {
     setErrors({});
     const run = importFiles(files, (progress) => setJob((j) => (j ? { ...j, progress } : j)));
     setJob({ kind: "import", cancel: run.cancel });
@@ -129,11 +131,12 @@ export function App() {
           });
           return;
         }
-        setOwn(p);
+        const next = mode === "add" && own ? mergeProfiles(own, p) : p;
+        setOwn(next);
         setMade(undefined);
         setFriend(undefined);
         setResult(undefined);
-        const stored = await saveProfile(p);
+        const stored = await saveProfile(next);
         if (!stored) console.info("This browser would not keep the summary; it lasts until you close the tab.");
         go("history");
       },
@@ -244,7 +247,7 @@ export function App() {
             hasOwnData={!!own}
           />
         ) : step === "history" && profile ? (
-          <MyHistory profile={profile} isDemo={isDemo} onForget={onForget} onNext={() => go("share")} />
+          <MyHistory profile={profile} isDemo={isDemo} name={activeOpts.name} onForget={onForget} onNext={() => go("share")} />
         ) : step === "share" && profile ? (
           <Share
             profile={profile}

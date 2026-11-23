@@ -2,6 +2,7 @@ import type { HistoryEvent, SourceReport } from "../types";
 import { classify, channelIdOf, type RawActivity } from "./classify";
 import { JsonObjectSplitter } from "./jsonStream";
 import { HtmlActivitySplitter } from "./htmlActivity";
+import { looksLikeSpotify, spotifyEvent } from "../music";
 
 /** Takeout ships one JSON metadata file per photo; those are never history. */
 const MEDIA_SIDECAR = /\.(jpe?g|png|heic|heif|gif|webp|mp4|mov|avi|3gp|m4v|mkv|dng|raw|tiff?|bmp)(\(\d+\))?\.[^/]*json$/i;
@@ -75,7 +76,9 @@ export class FileTextSink {
     const head = this.head.replace(/^﻿/, "").trimStart();
     const lower = this.path.toLowerCase();
     if (lower.endsWith(".json")) {
-      if (head.startsWith("[") && (/"(header|title|titleUrl|time)"\s*:/.test(head) || (complete && /^\[\s*\]/.test(head)))) {
+      if (head.startsWith("[") && looksLikeSpotify(head)) {
+        this.format = "spotify-json";
+      } else if (head.startsWith("[") && (/"(header|title|titleUrl|time)"\s*:/.test(head) || (complete && /^\[\s*\]/.test(head)))) {
         this.format = "activity-json";
       } else if (head.startsWith("{") && /"Browser History"\s*:/.test(head)) {
         this.format = "chrome-json";
@@ -92,6 +95,7 @@ export class FileTextSink {
     }
     if (this.format === "activity-json") this.json = new JsonObjectSplitter(1, (t) => this.activityJson(t));
     if (this.format === "chrome-json") this.json = new JsonObjectSplitter(2, (t) => this.chromeJson(t));
+    if (this.format === "spotify-json") this.json = new JsonObjectSplitter(1, (t) => this.spotifyJson(t));
     if (this.format === "activity-html") this.html = new HtmlActivitySplitter((r) => this.activity(r));
   }
 
@@ -137,6 +141,14 @@ export class FileTextSink {
     // Chrome history repeats Google searches that My Activity already has; keep sites only.
     const e = classify({ title: raw.title, titleUrl: raw.url, time: raw.time_usec ? raw.time_usec / 1000 : undefined });
     if (e?.kind === "visit") this.out(e);
+  }
+
+  private spotifyJson(text: string): void {
+    try {
+      this.out(spotifyEvent(JSON.parse(text)));
+    } catch {
+      /* skip a malformed record */
+    }
   }
 
   private csvLine(line: string): void {

@@ -57,6 +57,33 @@ interface Persona {
   channels: [Channel, number][];
   sites: [string, number][];
   subscriptions: Channel[];
+  /** Artists and how much they're played. */
+  music: [Artist, number][];
+  /** Where this person listens. */
+  musicApp: "ytmusic" | "spotify";
+}
+
+interface Artist {
+  name: string;
+  /** How the artist's auto-generated YouTube channel is named, if it differs. */
+  ytName?: string;
+  songs: string[];
+}
+
+const ARTISTS = {
+  velvet: { name: "Velvet Harbor", songs: ["Paper Lanterns", "Low Tide", "Northbound"] },
+  mira: { name: "Mira Sol", songs: ["Glasshouse", "Slow Bloom"] },
+  nightbus: { name: "The Night Bus Collective", ytName: "Night Bus Collective", songs: ["3am Tram", "Window Seat"] },
+  orchard: { name: "Static Orchard", songs: ["Ninefold", "Copper Wire"] },
+  kodama: { name: "Kodama Drive", songs: ["Neon Ferry", "Last Train to Minato"] },
+  juniper: { name: "Juniper Vale", songs: ["Cedar Smoke", "Long Way Home"] },
+  ada: { name: "Ada Okoro", songs: ["Indigo Hours", "Small Rooms"] },
+} satisfies Record<string, Artist>;
+
+function songVideoId(artist: string, song: string): string {
+  let h = 7;
+  for (const ch of artist + "/" + song) h = (Math.imul(h, 131) + ch.charCodeAt(0)) >>> 0;
+  return videoId(mulberry32(h));
 }
 
 const START = Date.UTC(2017, 0, 1);
@@ -219,6 +246,8 @@ function personas(): [Persona, Persona] {
       ["climbbeta.example", 2], ["kanjiwiki.example", 2], ["skyguide.example", 0.6], ["github.com", 3],
     ],
     subscriptions: [c.crumb, c.pitwall, c.boulder, c.code, c.kana, c.lofi],
+    music: [[ARTISTS.velvet, 6], [ARTISTS.nightbus, 4], [ARTISTS.mira, 2], [ARTISTS.orchard, 5], [ARTISTS.kodama, 3]],
+    musicApp: "ytmusic",
   };
   const sam: Persona = {
     name: "Sam",
@@ -247,6 +276,8 @@ function personas(): [Persona, Persona] {
       ["runnersnotes.example", 3], ["jazzcharts.example", 2], ["skyguide.example", 0.6], ["reddit.com", 3],
     ],
     subscriptions: [c.crumb, c.pitwall, c.plants, c.run, c.jazz],
+    music: [[ARTISTS.velvet, 4], [ARTISTS.mira, 5], [ARTISTS.nightbus, 2], [ARTISTS.juniper, 5], [ARTISTS.ada, 4]],
+    musicApp: "spotify",
   };
   return [alex, sam];
 }
@@ -296,7 +327,35 @@ function personaActivity(p: Persona, scale: number) {
 
   for (const m of sharedMoments(p)) (m.header === "YouTube" ? youtubeWatch : searchRecords).push(m);
 
-  const byTimeDesc = (a: RawActivity, b: RawActivity) => String(b.time).localeCompare(String(a.time));
+  if (p.musicApp === "ytmusic") {
+    for (let i = 0; i < 700 * scale; i++) {
+      const artist = weighted(rng, p.music);
+      const song = pick(rng, artist.songs);
+      const t = randomTime(rng, p.peakHour, Date.UTC(2019, 0, 1));
+      const yt = artist.ytName ?? artist.name;
+      youtubeWatch.push(
+        rng() < 0.85
+          ? {
+              header: "YouTube Music",
+              title: `Watched ${song}`,
+              titleUrl: `https://music.youtube.com/watch?v=${songVideoId(artist.name, song)}`,
+              subtitles: [{ name: `${yt} - Topic`, url: channelUrl(`${yt} - Topic`) }],
+              time: iso(t),
+              products: ["YouTube"],
+            }
+          : {
+              header: "YouTube",
+              title: `Watched ${artist.name} - ${song} (Official Video)`,
+              titleUrl: `https://www.youtube.com/watch?v=${songVideoId(artist.name, song + "/video")}`,
+              subtitles: [{ name: `${artist.name.replace(/[^A-Za-z]/g, "")}VEVO`, url: channelUrl(artist.name + "VEVO") }],
+              time: iso(t),
+              products: ["YouTube"],
+            },
+      );
+    }
+  }
+
+  const byTimeDesc = (a: { time?: string | number }, b: { time?: string | number }) => String(b.time).localeCompare(String(a.time));
   searchRecords.sort(byTimeDesc);
   youtubeWatch.sort(byTimeDesc);
   youtubeSearch.sort(byTimeDesc);
@@ -328,6 +387,51 @@ export function sampleTakeout(who: "Alex" | "Sam", format: "json" | "html" = "js
     { path: `Takeout/YouTube and YouTube Music/history/search-history.${ext}`, content: enc(a.youtubeSearch) },
     { path: `Takeout/YouTube and YouTube Music/subscriptions/subscriptions.csv`, content: subscriptionsCsv(p) },
     { path: `Takeout/archive_browser.html`, content: "<html><body>Archive index</body></html>" },
+  ];
+}
+
+/** A Spotify "Extended streaming history" file, for people who listen on Spotify. */
+export function sampleSpotify(who: "Alex" | "Sam", scale = 1): SampleFile[] {
+  const [alex, sam] = personas();
+  const p = who === "Alex" ? alex : sam;
+  if (p.musicApp !== "spotify") return [];
+  const rng = mulberry32(p.seed * 104729);
+  const plays: Record<string, unknown>[] = [];
+  for (let i = 0; i < 900 * scale; i++) {
+    const artist = weighted(rng, p.music);
+    const song = pick(rng, artist.songs);
+    const t = randomTime(rng, p.peakHour, Date.UTC(2021, 0, 1));
+    const skipped = rng() < 0.15;
+    plays.push({
+      ts: new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z"),
+      platform: "android",
+      ms_played: skipped ? Math.floor(rng() * 20_000) : 120_000 + Math.floor(rng() * 120_000),
+      conn_country: "ZZ",
+      master_metadata_track_name: rng() < 0.1 ? `${song} - 2023 Remaster` : song,
+      master_metadata_album_artist_name: artist.name,
+      master_metadata_album_album_name: `${artist.name} (Sample Album)`,
+      spotify_track_uri: `spotify:track:sample${songVideoId(artist.name, song)}`,
+      episode_name: null,
+      episode_show_name: null,
+      reason_start: "trackdone",
+      reason_end: skipped ? "fwdbtn" : "trackdone",
+      shuffle: false,
+      skipped,
+    });
+  }
+  // A podcast episode, which has no track and must be ignored.
+  plays.push({
+    ts: "2024-05-01T08:00:00Z",
+    ms_played: 1_800_000,
+    master_metadata_track_name: null,
+    master_metadata_album_artist_name: null,
+    episode_name: "Sample Episode",
+    episode_show_name: "Sample Podcast",
+  });
+  plays.sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+  return [
+    { path: "Spotify Extended Streaming History/Streaming_History_Audio_2021-2026_0.json", content: JSON.stringify(plays, null, 2) },
+    { path: "Spotify Account Data/Userdata.json", content: JSON.stringify({ username: "sample", country: "ZZ" }) },
   ];
 }
 

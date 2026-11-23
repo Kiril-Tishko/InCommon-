@@ -12,6 +12,8 @@ const CATEGORIES: { ns: Namespace; label: string; hint: string }[] = [
   { ns: "ch", label: "YouTube channels", hint: "Channels you watched." },
   { ns: "sub", label: "YouTube subscriptions", hint: "" },
   { ns: "v", label: "YouTube videos", hint: "Individual videos you watched." },
+  { ns: "art", label: "Music artists", hint: "From YouTube Music, music videos and Spotify." },
+  { ns: "song", label: "Songs", hint: "" },
   { ns: "site", label: "Websites", hint: "Site names only, like wikipedia.org, never full addresses." },
   { ns: "mq", label: "Maps searches", hint: "" },
 ];
