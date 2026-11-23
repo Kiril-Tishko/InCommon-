@@ -5,3 +5,7 @@ test-results/
 *.incommon.json
 samples/
 .DS_Store
+Takeout/
+takeout-*.zip
+my_spotify_data*.zip
+Spotify*/
