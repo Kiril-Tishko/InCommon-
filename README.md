@@ -7,7 +7,7 @@ Everything runs on your device. Nobody's history is uploaded anywhere, and you n
 ## Run it on your PC (Windows)
 
 1. Install [Node.js](https://nodejs.org/) (the LTS version).
-2. For the AI write-ups, install [Ollama](https://ollama.com/download) and download a model from a terminal: `ollama pull llama3.2` (small and fast) or a bigger one such as `ollama pull gemma3:12b` if you have a graphics card with 12 GB or more. LM Studio works too: load a model and start its server.
+2. For the AI write-ups, install [Ollama](https://ollama.com/download) and download a model from a terminal: `ollama pull qwen2.5:7b` (about 5 GB), or `ollama pull gemma3:12b` if you have a graphics card with 12 GB or more. Models under about 7B tend to make things up. LM Studio works too: load a model and start its server.
 3. Download this repository (on GitHub: **Code → Download ZIP**, then unzip it).
 4. Double-click **start.bat**. The first start installs what InCommon needs (about a minute), then your browser opens InCommon at `http://127.0.0.1:4173`.
 

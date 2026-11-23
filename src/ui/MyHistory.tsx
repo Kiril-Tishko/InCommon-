@@ -6,6 +6,8 @@ import { RankedList, type Row } from "./lists";
 import { fmt, formatDay, formatMonth, hourLabel, plural, times } from "./format";
 import { AiPanel } from "./AiPanel";
 import { portraitMessages } from "../ai/prompts";
+import { coverageNotes, sourceName, type CoverageNote } from "../core/coverage";
+import { localDay } from "../core/normalize";
 
 const yearStart = (y: number) => Date.UTC(y, 0, 1) / 86_400_000;
 
@@ -76,6 +78,7 @@ export function MyHistory({ profile, isDemo, name, onForget, onNext }: {
             </p>
           )}
         </div>
+        {!isDemo && <Coverage notes={coverageNotes(profile)} />}
         <div className="stat-row">
           <div className="stat">
             <b>{fmt(t.search)}</b>
@@ -269,7 +272,14 @@ export function MyHistory({ profile, isDemo, name, onForget, onNext }: {
           <ul className="small muted" style={{ paddingLeft: "1.1rem" }}>
             {profile.sources.map((s) => (
               <li key={s.path} style={{ overflowWrap: "anywhere" }}>
-                {s.path}: {fmt(s.events)} items
+                <b>{sourceName(s.path)}</b>: {fmt(s.events)} items
+                {s.first !== undefined && s.last !== undefined && (
+                  <>
+                    , {formatMonth(localDay(s.first))} to {formatMonth(localDay(s.last))}
+                  </>
+                )}
+                <br />
+                <span className="mono">{s.path}</span>
               </li>
             ))}
           </ul>
@@ -294,6 +304,40 @@ export function MyHistory({ profile, isDemo, name, onForget, onNext }: {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function Coverage({ notes }: { notes: CoverageNote[] }) {
+  if (notes.length === 0) return null;
+  return (
+    <div className="banner stack-sm" style={{ flexDirection: "column", alignItems: "stretch" }}>
+      <b>Your export may be missing some history</b>
+      <ul className="small" style={{ margin: 0, paddingLeft: "1.1rem" }}>
+        {notes.map((n) =>
+          n.kind === "ends" ? (
+            <li key="ends">
+              It stops in {formatMonth(n.lastDay)}. If you used Google after that, this may be an older download, or saving was
+              paused: check <b>Web &amp; App Activity</b> and <b>YouTube History</b> at{" "}
+              <a href="https://myactivity.google.com/activitycontrols" target="_blank" rel="noreferrer">
+                myactivity.google.com
+              </a>
+              , then request a fresh export.
+            </li>
+          ) : n.kind === "short" ? (
+            <li key="short">
+              It covers only {formatMonth(n.firstDay)} to {formatMonth(n.lastDay)}. Google may be auto-deleting older activity (My
+              Activity → <b>Auto-delete</b>). Anything already deleted can't be exported, but you can turn auto-delete off so history
+              is kept from now on.
+            </li>
+          ) : (
+            <li key="uneven">
+              {sourceName(n.long.path)} goes back to {formatMonth(localDay(n.long.first!))}, but {sourceName(n.short.path)} only to{" "}
+              {formatMonth(localDay(n.short.first!))}. Each Google product has its own auto-delete setting.
+            </li>
+          ),
+        )}
+      </ul>
     </div>
   );
 }

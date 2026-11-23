@@ -10,7 +10,8 @@ export function profileFromTexts(files: SampleFile[]): Profile {
     const sink = new FileTextSink(f.path, (e) => b.add(e));
     sink.push(f.content);
     sink.end();
-    if (sink.recognised && sink.events > 0) b.sources.push({ path: f.path, format: sink.recognised, events: sink.events });
+    const rep = sink.report();
+    if (rep) b.sources.push(rep);
   }
   return b.finish();
 }

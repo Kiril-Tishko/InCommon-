@@ -121,7 +121,7 @@ export async function* streamChat(
     const res = await fetch(`${server.base}/api/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model, messages, stream: true, options: { num_ctx: 8192, temperature: 0.8 } }),
+      body: JSON.stringify({ model, messages, stream: true, options: { num_ctx: 8192, temperature: 0.6 } }),
       signal,
     });
     if (!res.ok || !res.body) throw await failure(res);
@@ -138,7 +138,7 @@ export async function* streamChat(
   const res = await fetch(`${server.base}/v1/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ model, messages, stream: true, temperature: 0.8 }),
+    body: JSON.stringify({ model, messages, stream: true, temperature: 0.6 }),
     signal,
   });
   if (!res.ok || !res.body) throw await failure(res);

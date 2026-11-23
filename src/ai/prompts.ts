@@ -90,17 +90,15 @@ export function portraitMessages(profile: Profile, name: string, language: strin
   const years = Object.entries(profile.years).sort(([a], [c]) => a.localeCompare(c));
   if (years.length) b.line(`ACTIVITY BY YEAR: ${years.map(([y, n]) => `${y}: ${fmt(n)}`).join(", ")}.`);
 
-  const list = (ns: Namespace, n: number, unit: string, skip?: (k: string) => boolean, withExtra = false) =>
-    topItems(profile, ns, n, (it) => !skip?.(it.key)).map(
-      (it) => `${it.label}${withExtra && it.extra ? ` (by ${it.extra})` : ""} — ${fmt(it.count)} ${unit}`,
-    );
+  const list = (ns: Namespace, n: number, unit: string, skip?: (k: string) => boolean) =>
+    topItems(profile, ns, n, (it) => !skip?.(it.key)).map((it) => `${label(ns, it.label, it.extra)} — ${fmt(it.count)} ${unit}`);
 
   b.section("MUSIC ARTISTS (plays)", list("art", 25, "plays"));
-  b.section("SONGS (plays)", list("song", 15, "plays", undefined, true));
+  b.section("SONGS (plays)", list("song", 15, "plays"));
   b.section("TOP GOOGLE SEARCHES (times searched)", list("q", 45, "times", isGenericQuery));
   b.section("SEARCH TOPICS (words and phrases, times used)", list("w", 35, "times", isGenericQuery));
   b.section("YOUTUBE CHANNELS (videos watched)", list("ch", 25, "videos"));
-  b.section("MOST REWATCHED VIDEOS", list("v", 10, "times", undefined, true));
+  b.section("MOST REWATCHED VIDEOS", list("v", 10, "times"));
   b.section("YOUTUBE SEARCHES", list("yq", 15, "times"));
   b.section("WEBSITES (visits, big everyday sites left out)", list("site", 15, "visits", isGenericSite));
 
@@ -123,14 +121,23 @@ export function portraitMessages(profile: Profile, name: string, language: strin
   }
 
   const user = [
-    `Here is a summary of ${who}'s Google, YouTube and music history. Write a portrait of ${who}, speaking to them as "you".`,
+    `Here is a summary of ${who}'s Google, YouTube and music history.`,
     b.toString(),
-    "Use exactly these sections:",
+    `Write a portrait of ${who}. Write exactly these sections, each starting with its heading line:`,
     "## In one line",
     "## What you're into",
-    "## Your music taste (genres and moods you probably like, based on the artists; if there is no music data, say so in one sentence)",
+    "## Your music taste",
     "## How you've changed",
-    "## Fun facts (3 to 5 specific numbers or quirks from the data)",
+    "## Fun facts",
+    "",
+    "What goes in each section:",
+    "- In one line: one playful sentence that sums them up.",
+    "- What you're into: 3 to 6 bullets, each a theme backed by items from the data.",
+    "- Your music taste: the genres and moods they probably like, based on the artists and songs listed. If there is no music data, say so in one sentence.",
+    "- How you've changed: compare OLD INTERESTS THAT FADED with NEW THIS PAST YEAR. If those lists are missing, describe how their activity changed over the years.",
+    "- Fun facts: 3 to 5 bullets, each with a real number from the data.",
+    "",
+    `Voice: talk to ${who} as "you". Never write as if you were ${who}, and never use "I" or "we".`,
   ].join("\n");
   return [
     { role: "system", content: system(language) },
@@ -140,11 +147,19 @@ export function portraitMessages(profile: Profile, name: string, language: strin
 
 /* ------------------------------------------------------------------------ */
 
+/** Quote titles and attach their artist or channel, so small models don't mix them up. */
+function label(ns: Namespace, text: string, extra?: string): string {
+  if (ns === "song") return `"${text}"${extra ? ` by ${extra}` : ""}`;
+  if (ns === "v") return `"${text}"${extra ? ` (video from ${extra})` : " (video)"}`;
+  if (ns === "q" || ns === "yq" || ns === "mq") return `"${text}"`;
+  return text;
+}
+
 function shared(items: SharedItem[], n: number, me: string, them: string, unit: string): string[] {
   return items
     .filter((x) => !x.generic)
     .slice(0, n)
-    .map((x) => `${x.label}${x.extra ? ` (${x.extra})` : ""} — ${me} ${fmt(x.mine.count)}, ${them} ${fmt(x.theirs.count)} ${unit}`);
+    .map((x) => `${label(x.ns, x.label, x.extra)} — ${me} ${fmt(x.mine.count)} ${unit}, ${them} ${fmt(x.theirs.count)} ${unit}`);
 }
 
 export function togetherMessages(c: Comparison, language: string): ChatMessage[] {
@@ -178,14 +193,23 @@ export function togetherMessages(c: Comparison, language: string): ChatMessage[]
 
   const user = [
     `${me} and ${them} compared their Google, YouTube and music histories privately. The comparison only reveals what they BOTH have.`,
-    `Nothing else about ${them} is known, so don't guess what else ${them} likes. Speak to ${me} and ${them} together as "you two".`,
+    `Nothing else about either of them is known. Don't guess what else they like, and don't describe their jobs or lives.`,
     b.toString(),
-    "Use exactly these sections:",
-    "## You two in one line (include a funny name for the two of you, like a band or a club)",
-    "## What you really have in common (group the shared items into 2 to 4 themes)",
-    "## Your shared music taste (genres you both probably like; a playlist of up to 8 songs taken only from the shared songs and artists above; then up to 3 songs you might both enjoy, marked as suggestions. If there is no shared music, say so in one sentence.)",
+    "Write exactly these sections, each starting with its heading line:",
+    "## You two in one line",
+    "## What you really have in common",
+    "## Your shared music taste",
     "## The most surprising match",
-    "## Things to talk about next time (3 conversation starters)",
+    "## Things to talk about next time",
+    "",
+    "What goes in each section:",
+    "- You two in one line: one sentence that gives the two of them a funny name, like a band or a club, based on what they share.",
+    "- What you really have in common: group the shared items into 2 to 4 themes, one bullet each, naming the items.",
+    "- Your shared music taste: the genres they both probably like. Then a playlist of up to 8 songs copied exactly from SONGS BOTH PLAY, each with its artist (if there are no shared songs, use ARTISTS BOTH PLAY). Then, under the words \"You might also like\", at most 3 other songs. If there is no shared music, say so in one sentence.",
+    "- The most surprising match: one shared item that is unexpected, and why.",
+    "- Things to talk about next time: 3 bullet questions, each about a shared item listed above.",
+    "",
+    `Voice: talk to ${me} and ${them} as "you two". Never write as if you were ${me} or ${them}, and never use "I" or "we".`,
   ].join("\n");
   return [
     { role: "system", content: system(language) },

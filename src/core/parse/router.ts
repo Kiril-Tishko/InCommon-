@@ -110,9 +110,22 @@ export class FileTextSink {
     }
   }
 
+  first?: number;
+  last?: number;
+
+  /** What to record about this file in the import report. */
+  report(): SourceReport | undefined {
+    if (!this.format || this.events === 0) return undefined;
+    return { path: this.path, format: this.format, events: this.events, first: this.first, last: this.last };
+  }
+
   private out(e: HistoryEvent | undefined): void {
     if (!e) return;
     this.events++;
+    if (e.time !== undefined) {
+      if (this.first === undefined || e.time < this.first) this.first = e.time;
+      if (this.last === undefined || e.time > this.last) this.last = e.time;
+    }
     this.emit(e);
   }
 

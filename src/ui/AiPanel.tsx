@@ -42,7 +42,7 @@ export function AiPanel({ id, title, intro, build, demo }: {
     if (found.models.length === 0) {
       setError(
         found.kind === "ollama"
-          ? "Ollama is running but has no models yet. In a terminal, run: ollama pull llama3.2"
+          ? "Ollama is running but has no models yet. In a terminal, run: ollama pull qwen2.5:7b"
           : "The AI server is running but has no model loaded. Load one in LM Studio first.",
       );
       setPhase("error");
@@ -137,8 +137,9 @@ export function AiPanel({ id, title, intro, build, demo }: {
                 <a href="https://ollama.com/download" target="_blank" rel="noreferrer">
                   Ollama
                 </a>{" "}
-                (free). Then open a terminal and download a model, for example <code>ollama pull llama3.2</code>. A bigger model, such
-                as <code>ollama pull gemma3:12b</code>, writes better if your PC has a graphics card with 12 GB of memory or more.
+                (free). Then open a terminal and download a model, for example <code>ollama pull qwen2.5:7b</code> (about 5 GB).
+                Models of 7B and up write much better than tiny ones, which tend to make things up. With a graphics card that has 12 GB
+                of memory or more, try <code>ollama pull gemma3:12b</code>.
               </li>
               <li>
                 Install{" "}

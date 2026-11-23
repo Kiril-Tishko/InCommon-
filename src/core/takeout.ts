@@ -108,9 +108,8 @@ export async function importTakeout(files: File[], opts: ImportOptions = {}): Pr
           console.warn("Skipped", entry.filename, err);
         }
         zipDone += entry.compressedSize || 0;
-        if (sink.recognised && sink.events > 0) {
-          builder.sources.push({ path: entry.filename, format: sink.recognised, events: sink.events });
-        }
+        const rep = sink.report();
+        if (rep) builder.sources.push(rep);
       }
       await zip.close();
     } else if (isCandidatePath(file.name)) {
@@ -126,9 +125,8 @@ export async function importTakeout(files: File[], opts: ImportOptions = {}): Pr
         },
         opts.signal,
       );
-      if (sink.recognised && sink.events > 0) {
-        builder.sources.push({ path: file.name, format: sink.recognised, events: sink.events });
-      }
+      const rep = sink.report();
+      if (rep) builder.sources.push(rep);
     }
     doneBytes += file.size;
     report("Finishing up");

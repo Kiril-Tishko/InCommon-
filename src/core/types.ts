@@ -87,6 +87,9 @@ export interface SourceReport {
   path: string;
   format: "activity-json" | "activity-html" | "chrome-json" | "subscriptions-csv" | "spotify-json";
   events: number;
+  /** Earliest and latest timestamp in the file (ms), when it has any. */
+  first?: number;
+  last?: number;
 }
 
 /** Per-item entry inside a match file. */
